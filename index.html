@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Safety: this page may only talk to Google's Gemini service, nobody else. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; connect-src https://generativelanguage.googleapis.com">
+<title>Nova AI</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%230a0a0e'/%3E%3Cpath d='M16 4c1 7 5 11 12 12-7 1-11 5-12 12-1-7-5-11-12-12 7-1 11-5 12-12z' fill='%238b7cf6'/%3E%3C/svg%3E">
+<style>
+:root,[data-theme=dark]{--base:#0a0a0e;--panel:#121219;--raised:#1c1c27;--line:#2c2c3c;--ink:#ececf4;--muted:#9292a8;--accent:#8b7cf6;--accent2:#5aa2ff;--danger:#ff7878;color-scheme:dark}
+[data-theme=light]{--base:#f7f7fb;--panel:#ffffff;--raised:#eeeef7;--line:#dadae8;--ink:#181824;--muted:#64647c;--accent:#6854e8;--accent2:#2876eb;--danger:#c83232;color-scheme:light}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--base);color:var(--ink);font:15.5px/1.6 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif;transition:background .25s,color .25s}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
+.display{font-family:"Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;letter-spacing:-.02em}
+#app{display:flex;height:100dvh;overflow:hidden}
+#sidebar{width:18rem;flex-shrink:0;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden;transition:width .3s,transform .3s}
+#sidebar.closed{width:0;border-right-color:transparent}
+.sb-inner{width:18rem;height:100%;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px}
+.brand span{font-size:20px;font-weight:650;margin-left:10px}
+.brand div{display:flex;align-items:center}
+.icon-btn{width:38px;height:38px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:var(--muted);transition:background .15s,color .15s}
+.icon-btn:hover{background:var(--raised);color:var(--ink)}
+.icon-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#newchat{margin:0 12px 12px;display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--raised) 60%,transparent);font-weight:550;font-size:14px;transition:border-color .15s,background .15s}
+#newchat:hover{border-color:color-mix(in srgb,var(--accent) 60%,transparent);background:var(--raised)}
+#newchat svg{width:17px;height:17px;stroke:var(--accent);fill:none;stroke-width:1.8;stroke-linecap:round}
+#list{flex:1;min-height:0;overflow-y:auto;padding:0 12px 16px}
+#list h3{margin:14px 12px 6px;font-size:12px;font-weight:550;color:var(--muted)}
+.empty{padding:22px 12px;color:var(--muted);font-size:14px;line-height:1.6}
+.row{position:relative;display:flex;align-items:center;border-radius:12px;transition:background .15s}
+.row:hover,.row.active{background:var(--raised)}
+.row.active::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:2px;border-radius:2px;background:var(--accent)}
+.row .t{flex:1;min-width:0;text-align:left;padding:10px 12px;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .ops{display:flex;padding-right:4px}
+.row .ops button{width:30px;height:30px;border-radius:8px;color:var(--muted);display:flex;align-items:center;justify-content:center}
+.row .ops button:hover{background:var(--line);color:var(--ink)}
+.row .ops svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media(hover:hover){.row .ops{opacity:0;transition:opacity .15s}.row:hover .ops,.row:focus-within .ops{opacity:1}}
+main{flex:1;min-width:0;display:flex;flex-direction:column;position:relative}
+header{height:56px;flex-shrink:0;display:flex;align-items:center;gap:4px;padding:0 10px}
+header h1{flex:1;min-width:0;margin:0 8px;font-size:15px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#scroller{flex:1;min-height:0;overflow-y:auto}
+#welcome{max-width:760px;min-height:100%;margin:0 auto;padding:40px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.orb{position:relative;margin-bottom:28px;animation:rise .3s both}
+.orb::before{content:"";position:absolute;left:50%;top:50%;width:176px;height:176px;margin:-88px 0 0 -88px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--accent) 60%,transparent),color-mix(in srgb,var(--accent2) 28%,transparent) 60%,transparent 75%);filter:blur(40px);opacity:.6;animation:drift 7s ease-in-out infinite}
+.orb svg{position:relative;display:block;animation:drift 7s ease-in-out infinite}
+#welcome h2{margin:0;max-width:440px;font-size:34px;line-height:1.2;font-weight:650;animation:rise .3s .06s both}
+.sugs{margin-top:36px;width:100%;max-width:680px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sug{text-align:left;padding:16px;border:1px solid var(--line);border-radius:16px;background:color-mix(in srgb,var(--panel) 70%,transparent);transition:border-color .15s,background .15s;animation:rise .3s both}
+.sug:hover{border-color:color-mix(in srgb,var(--accent) 60%,transparent);background:var(--raised)}
+.sug b{display:block;font-size:14px}
+.sug span{display:block;margin-top:4px;font-size:14px;line-height:1.4;color:var(--muted)}
+.keynote{margin-top:22px;padding:12px 16px;border:1px solid color-mix(in srgb,var(--accent) 50%,transparent);border-radius:14px;background:color-mix(in srgb,var(--accent) 10%,transparent);font-size:14px}
+.keynote button{margin-left:8px;padding:6px 12px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-weight:600;font-size:13px}
+#messages{max-width:760px;margin:0 auto;padding:24px 16px;display:flex;flex-direction:column;gap:28px}
+.msg{animation:rise .25s both}
+.msg.user{display:flex;justify-content:flex-end}
+.bubble{max-width:85%;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--raised);padding:10px 16px;border-radius:18px 18px 6px 18px}
+.msg.assistant{display:flex;gap:12px}
+.avatar{margin-top:2px;width:32px;height:32px;flex-shrink:0;border:1px solid var(--line);border-radius:12px;background:var(--panel);display:flex;align-items:center;justify-content:center}
+.body{min-width:0;flex:1}
+.dots{display:flex;gap:6px;height:32px;align-items:center}
+.dots i{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.2s ease-in-out infinite}
+.dots i:nth-child(2){animation-delay:.16s}.dots i:nth-child(3){animation-delay:.32s}
+.actions{display:flex;gap:4px;margin:8px 0 0 -10px}
+.actions button{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:10px;font-size:12px;color:var(--muted)}
+.actions button:hover{background:var(--raised);color:var(--ink)}
+.actions svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.err{margin-top:8px;display:flex;gap:12px;padding:14px;border:1px solid color-mix(in srgb,var(--danger) 40%,transparent);background:color-mix(in srgb,var(--danger) 10%,transparent);border-radius:14px;font-size:14px}
+.err p{margin:0}.err button{margin-top:8px;padding:6px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:12px;font-weight:600}
+.md{overflow-wrap:anywhere}.md>:first-child{margin-top:0}.md>:last-child{margin-bottom:0}
+.md p{margin:12px 0}.md h1,.md h2,.md h3,.md h4{margin:22px 0 8px;line-height:1.3;font-weight:650}
+.md h1{font-size:24px}.md h2{font-size:20px}.md h3{font-size:17px}.md h4{font-size:15px}
+.md ul,.md ol{margin:12px 0;padding-left:24px}.md li{margin:4px 0}.md li::marker{color:var(--accent)}
+.md a{color:var(--accent2)}.md blockquote{margin:14px 0;padding-left:16px;border-left:2px solid var(--accent);color:var(--muted)}
+.md hr{border:0;border-top:1px solid var(--line);margin:22px 0}
+.md code{font-family:Consolas,"Cascadia Mono",monospace;font-size:.88em;background:var(--raised);padding:2px 6px;border-radius:6px}
+.tw{overflow-x:auto;margin:14px 0}.md table{border-collapse:collapse;font-size:14px;width:100%}
+.md th,.md td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}.md th{background:var(--raised)}
+.cb{margin:14px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--base)}
+.cb-h{display:flex;justify-content:space-between;align-items:center;padding:6px 12px;background:var(--raised);border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}
+.cb-h button{padding:4px 8px;border-radius:8px;color:var(--muted);font-size:12px}.cb-h button:hover{background:var(--line);color:var(--ink)}
+.cb pre{margin:0;padding:14px 16px;overflow-x:auto}.cb pre code{background:none;padding:0;font-size:13px;line-height:1.6}
+#composer{padding:8px 16px calc(12px + env(safe-area-inset-bottom))}
+.cbox{max-width:760px;margin:0 auto}
+.in{display:flex;align-items:flex-end;gap:8px;padding:8px;border:1px solid var(--line);border-radius:18px;background:var(--panel);box-shadow:0 8px 24px rgba(0,0,0,.12);transition:border-color .15s}
+.in:focus-within{border-color:color-mix(in srgb,var(--accent) 70%,transparent)}
+textarea{flex:1;min-height:44px;max-height:200px;resize:none;border:0;outline:0;background:none;color:var(--ink);font:inherit;padding:10px 12px;line-height:1.5}
+textarea::placeholder{color:var(--muted)}
+#send{width:44px;height:44px;border-radius:12px;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;transition:filter .15s,transform .1s}
+#send:hover:not(:disabled){filter:brightness(1.1)}#send:active:not(:disabled){transform:scale(.95)}#send:disabled{opacity:.35;cursor:not-allowed}
+#send svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#stop{height:44px;padding:0 14px;border-radius:12px;border:1px solid var(--line);background:var(--raised);font-weight:600;font-size:14px;display:none;align-items:center;gap:8px}
+#stop i{width:12px;height:12px;border-radius:3px;background:currentColor}
+.note{margin:8px 0 0;text-align:center;font-size:12px;color:var(--muted)}
+#backdrop{display:none}
+dialog{width:min(92vw,440px);padding:24px;border:1px solid var(--line);border-radius:20px;background:var(--panel);color:var(--ink)}
+dialog::backdrop{background:rgba(0,0,0,.55)}
+dialog h2{margin:0 0 6px;font-size:20px}dialog p{margin:0 0 14px;color:var(--muted);font-size:14px}
+dialog label{display:block;margin:12px 0 4px;font-size:13px;font-weight:600}
+dialog input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--base);color:var(--ink);font:inherit}
+dialog .btns{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
+dialog .btns button{padding:9px 16px;border-radius:10px;border:1px solid var(--line);background:var(--raised);font-weight:600;font-size:14px}
+dialog .btns .go{border:0;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2))}
+#status{margin-top:12px;font-size:14px;min-height:20px}
+dialog a{color:var(--accent2)}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes drift{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-10px) scale(1.06)}}
+@keyframes pulse{0%,80%,100%{opacity:.25;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+@media(max-width:767px){
+ #sidebar{position:fixed;inset:0 auto 0 0;z-index:40;width:18rem}
+ #sidebar.closed{width:18rem;transform:translateX(-100%)}
+ #backdrop.show{display:block;position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.55)}
+ .sugs{grid-template-columns:1fr}#welcome h2{font-size:28px}
+ .row .ops{opacity:1}
+}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="lg" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8b7cf6"/><stop offset="1" stop-color="#5aa2ff"/></linearGradient></defs></svg>
+<div id="app">
+ <div id="backdrop"></div>
+ <aside id="sidebar" class="closed"><div class="sb-inner">
+  <div class="brand"><div><span id="brandlogo"></span><span class="display">Nova AI</span></div>
+   <button class="icon-btn" id="closesb" aria-label="Close sidebar"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg></button></div>
+  <button id="newchat"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New chat</button>
+  <nav id="list" aria-label="Chat history"></nav>
+ </div></aside>
+ <main>
+  <header>
+   <button class="icon-btn" id="opensb" aria-label="Open sidebar"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg></button>
+   <h1 class="display" id="title">Nova AI</h1>
+   <button class="icon-btn" id="settingsbtn" aria-label="Settings" title="API key and model"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></button>
+   <button class="icon-btn" id="themebtn" aria-label="Switch theme"></button>
+  </header>
+  <div id="scroller"></div>
+  <div id="composer"><div class="cbox">
+   <div class="in"><textarea id="input" rows="1" placeholder="Message Nova AI" aria-label="Message Nova AI"></textarea>
+    <button id="stop" aria-label="Stop generating"><i></i>Stop</button>
+    <button id="send" aria-label="Send message" disabled><svg viewBox="0 0 24 24"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/></svg></button></div>
+   <p class="note">Enter to send, Shift + Enter for a new line. Nova AI can make mistakes, so double-check important facts.</p>
+  </div></div>
+ </main>
+</div>
+<dialog id="settings">
+ <h2 class="display">Connect to Gemini</h2>
+ <p>Your key stays in this browser on this computer and is only ever sent to Google. Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com/apikey</a>.</p>
+ <label for="keyin">Gemini API key</label><input id="keyin" autofocus type="password" autocomplete="off" spellcheck="false" placeholder="Paste your key here">
+ <label for="modelin">Model</label><input id="modelin" type="text" autocomplete="off" spellcheck="false" placeholder="gemini-2.5-flash">
+ <div id="status" role="status"></div>
+ <div class="btns"><button class="go" id="savekey">Save</button><button id="testkey">Test connection</button><button id="closeset">Close</button></div>
+</dialog>
+
+<script id="knowledge" type="application/json">[{"name":"about-nova-ai.md","text":"# About Nova AI (project notes)\n\nNova AI is a ChatGPT-style chatbot website. The interface is built with React, TypeScript and Tailwind CSS inside a Next.js project.\n\n## Architecture\nThe browser never talks to the AI directly. It sends messages to the site's own server route (/api/chat). The server checks the request, adds the secret API key from an environment variable, forwards the conversation to the AI service, and streams the answer back word by word.\n\n## Security\nThe API key is stored only on the server in the .env.local file or in the hosting provider's environment variables. The server validates input, limits message size and length, and limits how many messages one visitor can send per minute. It never logs keys or message text.\n\n## AI provider\nBy default Nova AI uses Google Gemini 2.5 Flash through Google's OpenAI-compatible endpoint. The provider and model can be changed with three settings: AI_BASE_URL, AI_MODEL and AI_API_KEY.\n\n## Knowledge folder\nFiles in the data folder are searched for each question. The most relevant pieces are given to the AI as reference notes, a simple form of retrieval-augmented generation.\n\n## Features\nStreaming answers, conversation memory, stop and regenerate buttons, copy buttons, chat history saved in the browser, rename and delete chats, light and dark themes, and a responsive layout for phones, tablets and desktops.\n\n## Limitations\nChat history is stored per browser, free AI quotas are limited, and the AI can make mistakes.\n"},{"name":"countries-and-capitals.csv","text":"country,capital,continent\nFrance,Paris,Europe\nGermany,Berlin,Europe\nItaly,Rome,Europe\nSpain,Madrid,Europe\nUnited Kingdom,London,Europe\nNetherlands,Amsterdam,Europe\nSweden,Stockholm,Europe\nNorway,Oslo,Europe\nGreece,Athens,Europe\nPoland,Warsaw,Europe\nRussia,Moscow,Europe/Asia\nTurkey,Ankara,Asia/Europe\nPakistan,Islamabad,Asia\nIndia,New Delhi,Asia\nChina,Beijing,Asia\nJapan,Tokyo,Asia\nSouth Korea,Seoul,Asia\nBangladesh,Dhaka,Asia\nIndonesia,Jakarta,Asia\nMalaysia,Kuala Lumpur,Asia\nThailand,Bangkok,Asia\nVietnam,Hanoi,Asia\nPhilippines,Manila,Asia\nSaudi Arabia,Riyadh,Asia\nIran,Tehran,Asia\nUnited Arab Emirates,Abu Dhabi,Asia\nEgypt,Cairo,Africa\nNigeria,Abuja,Africa\nKenya,Nairobi,Africa\nEthiopia,Addis Ababa,Africa\nSouth Africa,Pretoria (executive capital; Cape Town and Bloemfontein are also capitals),Africa\nUnited States,Washington D.C.,North America\nCanada,Ottawa,North America\nMexico,Mexico City,North America\nBrazil,Brasilia,South America\nArgentina,Buenos Aires,South America\nChile,Santiago,South America\nColombia,Bogota,South America\nPeru,Lima,South America\nAustralia,Canberra,Oceania\nNew Zealand,Wellington,Oceania\n"},{"name":"programming-languages.csv","text":"language,year_created,creator,typical_use\nPython,1991,Guido van Rossum,\"data science, scripting, web backends, teaching\"\nJavaScript,1995,Brendan Eich,\"websites and web apps, also servers via Node.js\"\nJava,1995,James Gosling (Sun Microsystems),\"enterprise software, Android apps, large systems\"\nPHP,1995,Rasmus Lerdorf,\"server-side websites such as WordPress\"\nRuby,1995,Yukihiro Matsumoto,\"web development with Ruby on Rails, scripting\"\nC,1972,Dennis Ritchie,\"operating systems, embedded systems, performance-critical code\"\nC++,1985,Bjarne Stroustrup,\"games, browsers, high-performance software\"\nC#,2000,Microsoft (Anders Hejlsberg),\"Windows apps, games with Unity, web backends\"\nSQL,1974,Donald Chamberlin and Raymond Boyce,\"querying and managing databases\"\nR,1993,Ross Ihaka and Robert Gentleman,\"statistics and data analysis\"\nGo,2009,Google (Robert Griesemer, Rob Pike, Ken Thompson),\"cloud services, networking tools\"\nRust,2010,Graydon Hoare (Mozilla),\"safe systems programming, performance and memory safety\"\nKotlin,2011,JetBrains,\"Android apps, backend development\"\nTypeScript,2012,Microsoft (Anders Hejlsberg),\"JavaScript with types for larger web projects\"\nSwift,2014,Apple (Chris Lattner),\"iPhone, iPad and Mac apps\"\n"},{"name":"python-basics.md","text":"# Python basics cheat sheet\n\n## Variables and types\nPython figures out types automatically: `age = 20` (int), `price = 9.99` (float), `name = \"Sara\"` (str), `ok = True` (bool).\n\n## Lists\nA list holds ordered items: `fruits = [\"apple\", \"banana\"]`. Add with `fruits.append(\"mango\")`. Loop with `for f in fruits: print(f)`.\n\n## Dictionaries\nA dictionary stores key-value pairs: `student = {\"name\": \"Ali\", \"grade\": 85}`. Read with `student[\"name\"]`.\n\n## Functions\nDefine with `def`: `def add(a, b): return a + b`. Call with `add(2, 3)`.\n\n## Removing duplicates from a list\n`unique = list(set(items))` removes duplicates but loses the order. To keep the order use `list(dict.fromkeys(items))`.\n\n## Reading a file\n`with open(\"notes.txt\") as f: text = f.read()` opens the file and closes it automatically.\n\n## Common errors\n- IndentationError: lines inside a block must be indented by the same amount.\n- NameError: you used a variable before creating it, or misspelled it.\n- TypeError: you mixed incompatible types, such as adding a number to a string.\n"},{"name":"university-study-skills.md","text":"# Study skills for university students\n\n## Planning a week\nBlock fixed commitments first (classes, work), then schedule two or three focused study sessions per day of 45 to 60 minutes, each followed by a 10 minute break. Leave one half-day free each week for catching up.\n\n## Active recall\nInstead of rereading notes, close them and write down everything you remember, then check what you missed. Practice questions and flashcards use the same idea and work better than highlighting.\n\n## Spaced repetition\nReview new material after one day, three days, one week and two weeks. Short repeated reviews beat one long cramming session.\n\n## Exam preparation\nStart at least two weeks early, make a topic checklist from the syllabus, solve past papers under a time limit, and sleep properly the night before.\n\n## Writing a report\nMake an outline first: introduction, main sections, conclusion. Write a rough draft without editing, then revise structure, then fix grammar and references last.\n\n## Presenting a project\nOpen with the problem, show a short demo, explain how it works at a high level, and finish with limitations and next steps. Practice out loud at least twice and keep slides to a few words each.\n"}]</script>
+<script>
+"use strict";
+const DEFAULT_MODEL="gemini-2.5-flash", FALLBACK_MODEL="gemini-2.5-flash";
+const MAX_INPUT=4000, MAX_MSGS=20, MAX_CHARS=28000;
+const SYSTEM="You are Nova AI, a friendly, knowledgeable assistant. Answer clearly and accurately. Use Markdown (short headings, lists, and fenced code blocks with a language tag) when it helps readability. If you are unsure about something, say so instead of guessing.";
+const $=id=>document.getElementById(id);
+const LOGO=s=>`<svg width="${s}" height="${s}" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2.5c1.2 7.7 5.8 12.3 13.5 13.5-7.7 1.2-12.3 5.8-13.5 13.5C14.8 21.8 10.2 17.2 2.5 16 10.2 14.8 14.8 10.2 16 2.5Z" fill="url(#lg)"/></svg>`;
+const ICON={copy:'<svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6.5A2.5 2.5 0 0 1 7.5 4H15"/></svg>',check:'<svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',refresh:'<svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4.2L4 8.5M4 4v4.5h4.5M4 13a8 8 0 0 0 14.5 4.2l1.5-1.7M20 20v-4.5h-4.5"/></svg>',pencil:'<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z"/></svg>',trash:'<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>',alert:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="color:var(--danger);flex-shrink:0;margin-top:2px"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5h.01"/></svg>',sun:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/></svg>',moon:'<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"/></svg>'};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const esc=s=>s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const store={get(k){try{return localStorage.getItem(k)}catch{return null}},set(k,v){try{localStorage.setItem(k,v)}catch{}}};
+
+/* ---------- state ---------- */
+let chats=[],activeId=null,busy=false,controller=null,stick=true;
+let settings={key:"",model:DEFAULT_MODEL};
+try{const s=JSON.parse(store.get("nova-lite:settings")||"{}");settings.key=(s.key||"").trim();settings.model=(s.model||DEFAULT_MODEL).trim()}catch{}
+try{const d=JSON.parse(store.get("nova-lite:chats")||"{}");if(Array.isArray(d.chats))chats=d.chats.filter(c=>c&&c.id&&Array.isArray(c.messages));activeId=chats.some(c=>c.id===d.activeId)?d.activeId:null}catch{}
+let saveT=null;
+const save=()=>{store.set("nova-lite:chats",JSON.stringify({chats:chats.slice(0,60),activeId}))};
+const saveSoon=()=>{clearTimeout(saveT);saveT=setTimeout(save,300)};
+addEventListener("pagehide",save);
+const active=()=>chats.find(c=>c.id===activeId)||null;
+
+/* ---------- markdown (small, safe: everything is escaped first) ---------- */
+function inline(raw){
+  const codes=[];let s=esc(raw).replace(/`([^`]+)`/g,(_,c)=>{codes.push(c);return "\u0000"+(codes.length-1)+"\u0000"});
+  s=s.replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>").replace(/(^|[^*\w])\*([^*\s][^*]*)\*/g,"$1<em>$2</em>");
+  s=s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  return s.replace(/\u0000(\d+)\u0000/g,(_,i)=>"<code>"+codes[i]+"</code>");
+}
+function md(src){
+  const L=src.replace(/\r/g,"").split("\n"),out=[];let i=0;
+  const isBlock=l=>/^(#{1,4}\s|```|\s*[-*+]\s|\s*\d+[.)]\s|>)/.test(l);
+  while(i<L.length){
+    let l=L[i],m;
+    if((m=l.match(/^```([\w+#-]*)\s*$/))){const code=[];i++;while(i<L.length&&!/^```\s*$/.test(L[i]))code.push(L[i++]);i++;
+      out.push(`<div class="cb"><div class="cb-h"><span>${esc(m[1]||"code")}</span><button data-copycode>Copy code</button></div><pre><code>${esc(code.join("\n"))}</code></pre></div>`);continue}
+    if(!l.trim()){i++;continue}
+    if((m=l.match(/^(#{1,4})\s+(.*)$/))){out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`);i++;continue}
+    if(/^(-{3,}|\*{3,})\s*$/.test(l)){out.push("<hr>");i++;continue}
+    if(/^\s*[-*+]\s+/.test(l)){const it=[];while(i<L.length&&/^\s*[-*+]\s+/.test(L[i]))it.push("<li>"+inline(L[i++].replace(/^\s*[-*+]\s+/,""))+"</li>");out.push("<ul>"+it.join("")+"</ul>");continue}
+    if(/^\s*\d+[.)]\s+/.test(l)){const it=[];while(i<L.length&&/^\s*\d+[.)]\s+/.test(L[i]))it.push("<li>"+inline(L[i++].replace(/^\s*\d+[.)]\s+/,""))+"</li>");out.push("<ol>"+it.join("")+"</ol>");continue}
+    if(/^>/.test(l)){const q=[];while(i<L.length&&/^>/.test(L[i]))q.push(L[i++].replace(/^>\s?/,""));out.push("<blockquote>"+inline(q.join(" "))+"</blockquote>");continue}
+    if(l.includes("|")&&i+1<L.length&&/^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(L[i+1])){
+      const cells=r=>r.trim().replace(/^\||\|$/g,"").split("|").map(c=>inline(c.trim()));
+      const head=cells(l);i+=2;const rows=[];while(i<L.length&&L[i].includes("|")&&L[i].trim())rows.push(cells(L[i++]));
+      out.push(`<div class="tw"><table><thead><tr>${head.map(c=>"<th>"+c+"</th>").join("")}</tr></thead><tbody>${rows.map(r=>"<tr>"+r.map(c=>"<td>"+c+"</td>").join("")+"</tr>").join("")}</tbody></table></div>`);continue}
+    const p=[];while(i<L.length&&L[i].trim()&&!(p.length&&isBlock(L[i])))p.push(inline(L[i++]));out.push("<p>"+p.join("<br>")+"</p>");
+  }
+  return out.join("");
+}
+
+/* ---------- knowledge folder (datasets embedded in this file) ---------- */
+const STOP=new Set("the and what how who are you for with that this can about from have please tell give explain does did was were your then than into when where which why not but all any some more most just also like make need want use using show write".split(" "));
+const wordsOf=s=>s.toLowerCase().match(/[a-z0-9]{3,}/g)||[];
+let CHUNKS=[];
+try{
+  const files=JSON.parse($("knowledge").textContent.replace(/^\/\*.*?\*\//,"")||"[]");
+  for(const f of files){
+    let parts=[];
+    if(/\.csv$/i.test(f.name)){const ls=f.text.split(/\r?\n/).filter(Boolean);for(let i=1;i<ls.length;i+=15)parts.push([ls[0],...ls.slice(i,i+15)].join("\n"))}
+    else{let cur="";for(const p of f.text.split(/\n\s*\n/)){if(cur&&cur.length+p.length>900){parts.push(cur);cur=""}cur+=(cur?"\n\n":"")+p}if(cur)parts.push(cur)}
+    for(const t of parts)CHUNKS.push({src:f.name,text:t,w:new Set(wordsOf(t))});
+  }
+}catch{}
+function references(q){
+  const ws=[...new Set(wordsOf(q).filter(w=>!STOP.has(w)))];if(!ws.length)return "";
+  const top=CHUNKS.map(c=>({c,s:ws.reduce((n,w)=>n+(c.w.has(w)?1:0),0)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s).slice(0,3);
+  let out="";for(const{c}of top){const piece=`[${c.src}]\n${c.text}\n\n`;if(out.length+piece.length>3500)break;out+=piece}return out.trim();
+}
+
+/* ---------- talking to Gemini ---------- */
+function friendly(status,body){
+  let msg="";try{msg=JSON.parse(body)?.error?.message||""}catch{}
+  if(status===400&&/api key|API_KEY_INVALID/i.test(body+msg))return "Google rejected your API key. Open Settings (gear icon), paste a fresh key from aistudio.google.com/apikey, and save.";
+  if(status===400)return "Google rejected the request (error 400). Check the model name in Settings, or try gemini-2.5-flash.";
+  if(status===401||status===403)return "Google says this key can't be used. Open Settings and paste a fresh key from aistudio.google.com/apikey.";
+  if(status===404)return "That model name wasn't found. Open Settings and use gemini-2.5-flash.";
+  if(status===429)return "The free Gemini quota is used up for the moment. Please wait a minute and try again.";
+  if(status>=500)return `Google's AI is busy or having trouble (error ${status}). Wait a minute and try again.`;
+  return `Something went wrong (error ${status}). Please try again.`;
+}
+function buildHistory(msgs){
+  let u=msgs.filter(m=>!m.error&&m.content.trim()).map(m=>({role:m.role,content:m.content.slice(0,16000)})).slice(-MAX_MSGS);
+  let total=u.reduce((n,m)=>n+m.content.length,0);
+  while(u.length>1&&total>MAX_CHARS){total-=u[0].content.length;u.shift()}
+  while(u.length>1&&u[0].role!=="user")u.shift();
+  return u;
+}
+async function callGemini(model,history,sys,signal){
+  const url=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(settings.key)}`;
+  return fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},signal,
+    body:JSON.stringify({systemInstruction:{parts:[{text:sys}]},contents:history.map(m=>({role:m.role==="assistant"?"model":"user",parts:[{text:m.content}]}))})});
+}
+async function streamReply(history,onText,signal){
+  const refs=references(history.filter(m=>m.role==="user").slice(-2).map(m=>m.content).join(" "));
+  const sys=refs?`${SYSTEM}\n\nReference notes from the datasets built into this app are below. Use them when they help answer the question. If they are not relevant, answer normally and do not mention them.\n\n${refs}`:SYSTEM;
+  let model=settings.model||DEFAULT_MODEL,res=await callGemini(model,history,sys,signal);
+  if(res.status>=500){await sleep(800);res=await callGemini(model,history,sys,signal)}
+  if(!res.ok&&model!==FALLBACK_MODEL&&(res.status===400||res.status===404||res.status>=500)&&!/api key|API_KEY_INVALID/i.test(await res.clone().text()))res=await callGemini(FALLBACK_MODEL,history,sys,signal);
+  if(!res.ok)throw new Error(friendly(res.status,await res.text()));
+  const reader=res.body.getReader(),dec=new TextDecoder();let buf="",text="";
+  for(;;){
+    const{done,value}=await reader.read();if(done)break;
+    buf+=dec.decode(value,{stream:true});const lines=buf.split("\n");buf=lines.pop()||"";
+    for(const raw of lines){const ln=raw.trim();if(!ln.startsWith("data:"))continue;
+      try{const j=JSON.parse(ln.slice(5));const parts=j?.candidates?.[0]?.content?.parts||[];
+        const t=parts.filter(p=>typeof p.text==="string"&&!p.thought).map(p=>p.text).join("");if(t){text+=t;onText(text)}}catch{}}
+  }
+  if(!text.trim())throw new Error("Nova AI sent back an empty reply (it may have been blocked). Try rephrasing your question.");
+  return text;
+}
+
+/* ---------- chat actions ---------- */
+async function generate(chat,history){
+  const a={id:uid(),role:"assistant",content:""};chat.messages.push(a);chat.updatedAt=Date.now();
+  busy=true;controller=new AbortController();const mine=controller;renderAll();
+  let raf=0;const onText=t=>{a.content=t;if(!raf)raf=requestAnimationFrame(()=>{raf=0;updateLast()})};
+  try{a.content=await streamReply(buildHistory(history),onText,mine.signal)}
+  catch(e){
+    if(mine.signal.aborted){if(!a.content.trim())chat.messages=chat.messages.filter(m=>m!==a)}
+    else a.error=e instanceof TypeError?"Couldn't reach Google. Check your internet connection and try again.":(e.message||"Something went wrong. Please try again.");
+  }
+  if(controller===mine)controller=null;busy=false;save();renderAll();
+}
+function send(raw){
+  const text=raw.trim().slice(0,MAX_INPUT);if(!text||busy)return;
+  if(!settings.key){openSettings("Paste your free Gemini key to start chatting.");return}
+  let chat=active();const um={id:uid(),role:"user",content:text};
+  if(chat){if(!chat.messages.length)chat.title=mkTitle(text);chat.messages.push(um);chat.updatedAt=Date.now()}
+  else{chat={id:uid(),title:mkTitle(text),createdAt:Date.now(),updatedAt:Date.now(),messages:[um]};chats.unshift(chat);activeId=chat.id}
+  stick=true;generate(chat,[...chat.messages]);
+}
+function regenerate(){
+  const chat=active();if(!chat||busy)return;
+  if(chat.messages.length&&chat.messages[chat.messages.length-1].role==="assistant")chat.messages.pop();
+  if(!chat.messages.length||chat.messages[chat.messages.length-1].role!=="user")return renderAll();
+  stick=true;generate(chat,[...chat.messages]);
+}
+const mkTitle=t=>{t=t.replace(/\s+/g," ").trim();return t.length>40?t.slice(0,40).trimEnd()+"…":t||"New chat"};
+const stopGen=()=>controller&&controller.abort();
+function newChat(){stopGen();activeId=null;save();renderAll();closeSbMobile();$("input").focus()}
+function selectChat(id){if(id!==activeId)stopGen();activeId=id;stick=true;save();renderAll();closeSbMobile()}
+
+/* ---------- drawing the screen ---------- */
+const SUGS=[["Explain the internet","Explain how the internet works, as if I'm new to technology."],["Write some code","Write a Python function that removes duplicates from a list, and explain how it works."],["Plan my week","Help me build a balanced weekly study routine with time for breaks."],["Spark an idea","Give me five ideas for a small weekend project I can finish in two days."]];
+function groupLabel(ts){const d=86400000,t0=new Date().setHours(0,0,0,0);return ts>=t0?"Today":ts>=t0-d?"Yesterday":ts>=t0-7*d?"Previous 7 days":"Older"}
+function renderList(){
+  const el=$("list");
+  if(!chats.length){el.innerHTML='<p class="empty">Your conversations will appear here once you send a message.</p>';return}
+  const sorted=[...chats].sort((a,b)=>b.updatedAt-a.updatedAt);let html="",last="";
+  for(const c of sorted){const g=groupLabel(c.updatedAt);if(g!==last){html+=`<h3>${g}</h3>`;last=g}
+    html+=`<div class="row${c.id===activeId?" active":""}" data-id="${c.id}"><button class="t" data-act="open" title="${esc(c.title)}">${esc(c.title)}</button><div class="ops"><button data-act="rename" aria-label="Rename chat">${ICON.pencil}</button><button data-act="delete" aria-label="Delete chat">${ICON.trash}</button></div></div>`}
+  el.innerHTML=html;
+}
+function msgHtml(m,isLast){
+  if(m.role==="user")return `<div class="msg user"><div class="bubble">${esc(m.content)}</div></div>`;
+  const waiting=busy&&isLast&&!m.content&&!m.error;
+  let h=`<div class="msg assistant" data-id="${m.id}"><div class="avatar">${LOGO(18)}</div><div class="body">`;
+  if(waiting)h+='<div class="dots" role="status" aria-label="Nova AI is thinking"><i></i><i></i><i></i></div>';
+  h+=`<div class="md">${m.content?md(m.content):""}</div>`;
+  if(m.error)h+=`<div class="err" role="alert">${ICON.alert}<div><p>${esc(m.error)}</p>${isLast&&!busy?`<button data-act="regen">Try again</button>`:""}</div></div>`;
+  if(!(busy&&isLast)&&!m.error&&m.content)h+=`<div class="actions"><button data-act="copy">${ICON.copy}Copy</button>${isLast?`<button data-act="regen">${ICON.refresh}Regenerate</button>`:""}</div>`;
+  return h+"</div></div>";
+}
+function renderAll(){
+  renderList();const c=active();$("title").textContent=c?c.title:"Nova AI";
+  const sc=$("scroller");
+  if(!c||!c.messages.length){
+    sc.innerHTML=`<div id="welcome"><div class="orb">${LOGO(68)}</div><h2 class="display">Hello! I'm Nova AI. How can I help you today?</h2>
+      ${settings.key?"":'<div class="keynote">Add your free Gemini key to start. <button data-act="setkey">Add key</button></div>'}
+      <div class="sugs">${SUGS.map((s,i)=>`<button class="sug" data-prompt="${esc(s[1])}" style="animation-delay:${140+i*50}ms"><b>${s[0]}</b><span>${esc(s[1])}</span></button>`).join("")}</div></div>`;
+  }else{
+    sc.innerHTML='<div id="messages">'+c.messages.map((m,i)=>msgHtml(m,i===c.messages.length-1)).join("")+"</div>";
+  }
+  $("send").style.display=busy?"none":"flex";$("stop").style.display=busy?"flex":"none";
+  $("send").disabled=!$("input").value.trim();
+  if(stick)sc.scrollTop=sc.scrollHeight;saveSoon();
+}
+function updateLast(){
+  const els=document.querySelectorAll(".msg.assistant");const el=els[els.length-1];const c=active();if(!el||!c)return;
+  const m=c.messages[c.messages.length-1];const md_=el.querySelector(".md");if(md_&&m)md_.innerHTML=md(m.content);
+  const d=el.querySelector(".dots");if(d&&m.content)d.remove();
+  if(stick){const sc=$("scroller");sc.scrollTop=sc.scrollHeight}
+}
+
+/* ---------- wiring ---------- */
+const sb=$("sidebar"),isMobile=()=>matchMedia("(max-width:767px)").matches;
+function setSb(open){sb.classList.toggle("closed",!open);$("backdrop").classList.toggle("show",open&&isMobile());$("opensb").style.display=open&&!isMobile()?"none":""}
+const closeSbMobile=()=>{if(isMobile())setSb(false)};
+$("opensb").onclick=()=>setSb(true);$("closesb").onclick=()=>setSb(false);$("backdrop").onclick=()=>setSb(false);
+$("newchat").onclick=newChat;
+$("list").onclick=e=>{
+  const b=e.target.closest("[data-act]");if(!b)return;const row=b.closest(".row");const id=row&&row.dataset.id;const c=chats.find(x=>x.id===id);if(!c)return;
+  if(b.dataset.act==="open")selectChat(id);
+  if(b.dataset.act==="rename"){const t=prompt("Rename chat",c.title);if(t&&t.trim()){c.title=t.replace(/\s+/g," ").trim().slice(0,60);save();renderAll()}}
+  if(b.dataset.act==="delete"&&confirm("Delete this chat?")){if(id===activeId){stopGen();activeId=null}chats=chats.filter(x=>x.id!==id);save();renderAll()}
+};
+$("scroller").onclick=async e=>{
+  const sug=e.target.closest("[data-prompt]");if(sug)return send(sug.dataset.prompt);
+  const b=e.target.closest("[data-act],[data-copycode]");if(!b)return;
+  if(b.dataset.act==="setkey")return openSettings();
+  if(b.dataset.act==="regen")return regenerate();
+  const flash=(btn,ok,label)=>{if(!ok)return;const o=btn.innerHTML;btn.innerHTML=ICON.check+label;setTimeout(()=>btn.innerHTML=o,1600)};
+  if(b.dataset.act==="copy"){const c=active();const el=b.closest(".msg");const m=c&&c.messages.find(x=>x.id===el.dataset.id);if(m)flash(b,await copy(m.content),"Copied")}
+  if(b.hasAttribute("data-copycode")){const code=b.closest(".cb").querySelector("code").textContent;const o=b.textContent;if(await copy(code)){b.textContent="Copied";setTimeout(()=>b.textContent=o,1600)}}
+};
+async function copy(t){try{await navigator.clipboard.writeText(t);return true}catch{try{const ta=document.createElement("textarea");ta.value=t;ta.style.cssText="position:fixed;opacity:0";document.body.appendChild(ta);ta.select();const ok=document.execCommand("copy");ta.remove();return ok}catch{return false}}}
+$("scroller").onscroll=()=>{const s=$("scroller");stick=s.scrollHeight-s.scrollTop-s.clientHeight<120};
+const input=$("input");
+input.oninput=()=>{input.value=input.value.slice(0,MAX_INPUT);input.style.height="auto";input.style.height=Math.min(input.scrollHeight,200)+"px";$("send").disabled=!input.value.trim()||busy};
+input.onkeydown=e=>{if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){e.preventDefault();doSend()}};
+function doSend(){const v=input.value;if(!v.trim()||busy)return;if(!settings.key){openSettings("Paste your free Gemini key to start chatting.");return}input.value="";input.style.height="auto";send(v)}
+$("send").onclick=doSend;$("stop").onclick=stopGen;
+
+function setTheme(t){document.documentElement.dataset.theme=t;store.set("nova-lite:theme",t);$("themebtn").innerHTML=t==="dark"?ICON.sun:ICON.moon;$("themebtn").setAttribute("aria-label",t==="dark"?"Switch to light mode":"Switch to dark mode")}
+$("themebtn").onclick=()=>setTheme(document.documentElement.dataset.theme==="dark"?"light":"dark");
+setTheme(store.get("nova-lite:theme")==="light"?"light":"dark");
+
+const dlg=$("settings"),status=$("status");
+function openSettings(msg){$("keyin").value=settings.key;$("modelin").value=settings.model;status.style.color="var(--muted)";status.textContent=msg||"";dlg.showModal()}
+function readForm(){settings.key=$("keyin").value.trim().replace(/^["']|["']$/g,"");settings.model=$("modelin").value.trim()||DEFAULT_MODEL;store.set("nova-lite:settings",JSON.stringify(settings))}
+$("settingsbtn").onclick=()=>openSettings();$("closeset").onclick=()=>dlg.close();
+$("savekey").onclick=()=>{readForm();status.style.color="var(--accent2)";status.textContent=settings.key?"Saved.":"Key cleared.";renderAll();if(settings.key)setTimeout(()=>dlg.close(),500)};
+$("testkey").onclick=async()=>{
+  readForm();if(!settings.key){status.style.color="var(--danger)";status.textContent="Paste a key first.";return}
+  status.style.color="var(--muted)";status.textContent="Testing with Google...";
+  try{
+    const url=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(settings.model)}:generateContent?key=${encodeURIComponent(settings.key)}`;
+    const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},signal:AbortSignal.timeout(20000),body:JSON.stringify({contents:[{role:"user",parts:[{text:"Reply with the word OK."}]}]})});
+    if(r.ok){status.style.color="#4fb88b";status.textContent="Connected. The key and model work.";renderAll()}
+    else{status.style.color="var(--danger)";status.textContent=friendly(r.status,await r.text())}
+  }catch{status.style.color="var(--danger)";status.textContent="Couldn't reach Google. Check your internet connection."}
+};
+
+setSb(!isMobile());addEventListener("resize",()=>{if(!isMobile())$("backdrop").classList.remove("show")});
+$("brandlogo").innerHTML=LOGO(26);
+renderAll();
+if(!settings.key)setTimeout(()=>{if(!dlg.open)openSettings("Paste your free Gemini key to start.")},400);
+</script>
+</body>
+</html>
